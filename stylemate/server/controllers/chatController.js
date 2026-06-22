@@ -1,7 +1,7 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai").default;
 const store = require("../data/wardrobeStore");
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const chat = async (req, res) => {
   const { messages } = req.body;
@@ -19,17 +19,19 @@ Give short, punchy, confident style advice. Maximum 3 sentences per reply.
 Be specific — reference actual wardrobe items when relevant. No bullet lists.`;
 
   try {
-    const response = await client.messages.create({
-      model: "claude-opus-4-5",
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
       max_tokens: 512,
-      system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages.map(m => ({ role: m.role, content: m.content })),
+      ],
     });
 
-    const reply = response.content[0].text;
+    const reply = completion.choices[0].message.content;
     res.json({ success: true, data: { role: "assistant", content: reply } });
   } catch (err) {
-    console.error("[Chat] Claude error:", err.message);
+    console.error("[Chat] OpenAI error:", err.message);
     res.status(500).json({ success: false, error: "Failed to get style advice. Check your API key." });
   }
 };

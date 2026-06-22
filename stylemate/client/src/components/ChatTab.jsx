@@ -5,29 +5,32 @@ const SUGGESTIONS = [
   "What should I wear to an interview?",
   "How do I style my navy trousers?",
   "What's missing from my wardrobe?",
-  "Best casual Friday look?",
+  "Best casual Friday outfit?",
   "How to look more put-together?",
+  "What shoes work with everything?",
 ];
 
 export default function ChatTab() {
   const [messages, setMessages] = useState([]);
   const [input,    setInput]    = useState("");
   const [sending,  setSending]  = useState(false);
-  const endRef = useRef(null);
+  const endRef   = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, sending]);
 
   const send = async (text) => {
     const msg = text || input;
     if (!msg.trim() || sending) return;
 
-    const userMsg   = { role: "user", content: msg };
+    const userMsg    = { role: "user", content: msg };
     const newHistory = [...messages, userMsg];
     setMessages(newHistory);
     setInput("");
     setSending(true);
+    inputRef.current?.focus();
 
     try {
       const res = await chatAPI.send(newHistory);
@@ -35,100 +38,144 @@ export default function ChatTab() {
     } catch (e) {
       setMessages([...newHistory, {
         role: "assistant",
-        content: e.response?.data?.error || "Something went wrong. Is the server running?"
+        content: e.response?.data?.error || "Something went wrong. Is the server running?",
       }]);
     } finally {
       setSending(false);
     }
   };
 
+  const clear = () => { setMessages([]); setInput(""); };
+
   return (
-    <div>
-      <div style={styles.header}>
-        <div style={styles.title}>Style Advisor</div>
-        <div style={styles.subtitle}>Ask anything about your wardrobe</div>
+    <div style={s.wrap}>
+      {/* Header */}
+      <div style={s.header}>
+        <div>
+          <div style={s.title}>Style Advisor</div>
+          <div style={s.subtitle}>
+            <span style={s.modelDot} />
+            Powered by GPT-4o · Your personal AI stylist
+          </div>
+        </div>
+        {messages.length > 0 && (
+          <button style={s.clearBtn} onClick={clear}>Clear chat</button>
+        )}
       </div>
 
+      {/* Suggestions */}
       {messages.length === 0 && (
-        <div>
-          <div style={styles.hint}>Suggested questions</div>
-          <div style={styles.suggestions}>
+        <div style={s.sugWrap} className="anim-fade-in">
+          <div style={s.sugLabel}>Suggested questions</div>
+          <div style={s.suggestions}>
             {SUGGESTIONS.map(q => (
-              <button key={q} style={styles.sugBtn} onClick={() => send(q)}>{q}</button>
+              <button key={q} className="sug-pill" onClick={() => send(q)}>{q}</button>
             ))}
           </div>
         </div>
       )}
 
-      <div style={styles.chatWrap}>
-        <div style={styles.messages}>
+      {/* Chat box */}
+      <div style={s.chatBox}>
+        <div style={s.messages}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ ...styles.msgRow, ...(msg.role === "user" ? styles.msgRowUser : {}) }}>
-              <div style={{ ...styles.bubble, ...(msg.role === "user" ? styles.bubbleUser : styles.bubbleBot) }}>
-                {msg.content}
-              </div>
-            </div>
+            <ChatBubble key={i} msg={msg} />
           ))}
-          {sending && (
-            <div style={styles.msgRow}>
-              <div style={{ ...styles.bubble, ...styles.bubbleBot, ...styles.typing }}>
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          )}
+          {sending && <TypingIndicator />}
           <div ref={endRef} />
         </div>
 
-        <div style={styles.inputRow}>
-          <input
-            style={styles.chatInput}
-            placeholder="Ask your style advisor…"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && send()}
-            disabled={sending}
-          />
-          <button style={{ ...styles.sendBtn, ...(sending ? styles.sendBtnDisabled : {}) }} onClick={() => send()} disabled={sending}>
-            →
-          </button>
+        {/* Input row */}
+        <div style={s.inputWrap}>
+          <div style={s.inputRow}>
+            <input
+              ref={inputRef}
+              style={s.chatInput}
+              placeholder="Ask your style advisor…"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+              disabled={sending}
+            />
+            <button
+              style={{ ...s.sendBtn, ...(!input.trim() || sending ? s.sendOff : {}) }}
+              onClick={() => send()}
+              disabled={!input.trim() || sending}
+              title="Send (Enter)"
+            >
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <path d="M14 8L2 2l2 6-2 6 12-6z" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+          <div style={s.hint}>Press Enter to send</div>
         </div>
       </div>
-
-      <style>{`
-        .typing span {
-          display: inline-block;
-          width: 6px; height: 6px;
-          background: var(--text-muted);
-          border-radius: 50%;
-          margin: 0 2px;
-          animation: pulse 1.2s ease-in-out infinite;
-        }
-        .typing span:nth-child(2) { animation-delay: 0.2s; }
-        .typing span:nth-child(3) { animation-delay: 0.4s; }
-      `}</style>
     </div>
   );
 }
 
-const styles = {
-  header:      { marginBottom: "20px" },
-  title:       { fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, letterSpacing: "-0.3px", marginBottom: "4px" },
-  subtitle:    { fontSize: "12px", color: "var(--text-muted)" },
-  hint:        { fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--text-faint)", textAlign: "center", padding: "16px 0 12px" },
-  suggestions: { display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px", justifyContent: "center" },
-  sugBtn:      { padding: "6px 14px", background: "none", border: "1px solid var(--border)", borderRadius: "20px", color: "var(--text-muted)", fontSize: "11px", transition: "all 0.15s" },
-  chatWrap:    { display: "flex", flexDirection: "column", height: "420px" },
-  messages:    { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", paddingBottom: "12px", scrollbarWidth: "thin", scrollbarColor: "#2a2520 transparent" },
-  msgRow:      { display: "flex", justifyContent: "flex-start" },
-  msgRowUser:  { justifyContent: "flex-end" },
-  bubble:      { maxWidth: "75%", padding: "12px 16px", borderRadius: "10px", fontSize: "13px", lineHeight: 1.7 },
-  bubbleUser:  { background: "var(--gold-dim)", border: "1px solid var(--gold-border)", color: "#d8d4cc" },
-  bubbleBot:   { background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-secondary)" },
-  typing:      { display: "flex", alignItems: "center", className: "typing" },
-  inputRow:    { display: "flex", gap: "10px", paddingTop: "12px", borderTop: "1px solid var(--border)" },
-  chatInput:   { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "12px 16px", color: "#c8c4bc", fontSize: "13px", outline: "none" },
-  sendBtn:     { padding: "12px 20px", background: "var(--gold-dim)", color: "var(--gold)", border: "1px solid var(--gold-border)", borderRadius: "var(--radius-sm)", fontSize: "16px", transition: "all 0.15s" },
-  sendBtnDisabled: { opacity: 0.4, cursor: "not-allowed" },
+function ChatBubble({ msg }) {
+  const isUser = msg.role === "user";
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", justifyContent: isUser ? "flex-end" : "flex-start" }}>
+      {!isUser && <Avatar label="S" gold />}
+      <div
+        className={isUser ? "bubble-user" : "bubble-bot"}
+        style={{ maxWidth: "72%", padding: "12px 16px", fontSize: "13px", lineHeight: 1.75 }}
+      >
+        {msg.content}
+      </div>
+      {isUser && <Avatar label="U" />}
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+      <Avatar label="S" gold />
+      <div className="bubble-bot" style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: "1px" }}>
+        <span className="typing-dot" />
+        <span className="typing-dot" />
+        <span className="typing-dot" />
+      </div>
+    </div>
+  );
+}
+
+function Avatar({ label, gold }) {
+  return (
+    <div style={{
+      width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
+      background: gold ? "var(--gold-dim)" : "rgba(255,255,255,0.04)",
+      border: `1px solid ${gold ? "var(--border-gold)" : "var(--border)"}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: "11px", fontWeight: 600,
+      color: gold ? "var(--gold)" : "var(--text-muted)",
+      fontFamily: "var(--font-serif)",
+    }}>
+      {label}
+    </div>
+  );
+}
+
+const s = {
+  wrap:        { maxWidth: "720px", margin: "0 auto" },
+  header:      { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" },
+  title:       { fontFamily: "var(--font-serif)", fontSize: "24px", fontWeight: 600, letterSpacing: "-0.3px", marginBottom: "6px" },
+  subtitle:    { display: "flex", alignItems: "center", gap: "7px", fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.3px" },
+  modelDot:    { width: "5px", height: "5px", borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 5px rgba(122,184,122,0.6)", flexShrink: 0 },
+  clearBtn:    { fontSize: "11px", color: "var(--text-faint)", background: "none", border: "1px solid var(--border)", borderRadius: "20px", padding: "5px 14px", transition: "all 0.18s" },
+  sugWrap:     { marginBottom: "24px" },
+  sugLabel:    { fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", color: "var(--text-faint)", textAlign: "center", marginBottom: "14px" },
+  suggestions: { display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" },
+  chatBox:     { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden" },
+  messages:    { minHeight: "300px", maxHeight: "440px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px", padding: "22px", scrollbarWidth: "thin", scrollbarColor: "#242020 transparent" },
+  inputWrap:   { padding: "12px 16px 14px", borderTop: "1px solid var(--border)", background: "rgba(255,255,255,0.01)" },
+  inputRow:    { display: "flex", gap: "10px", alignItems: "center" },
+  chatInput:   { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "12px 16px", color: "#c8c4bc", fontSize: "13px", outline: "none", transition: "border-color 0.18s, box-shadow 0.18s" },
+  sendBtn:     { width: "42px", height: "42px", borderRadius: "50%", background: "var(--gold-dim)", color: "var(--gold)", border: "1px solid var(--border-gold)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.18s" },
+  sendOff:     { opacity: 0.32, cursor: "not-allowed" },
+  hint:        { fontSize: "10px", color: "var(--text-faint)", textAlign: "right", marginTop: "7px", letterSpacing: "0.3px" },
 };

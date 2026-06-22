@@ -1,9 +1,7 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const { recommend } = require("../model/styleRecommender");
 const store = require("../data/wardrobeStore");
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const getRecommendation = async (req, res) => {
+const getRecommendation = (req, res) => {
   const { occasion = "Casual", stylePersona = "classic", weather = "Mild" } = req.body;
 
   const wardrobe = store.getAll();
@@ -11,40 +9,28 @@ const getRecommendation = async (req, res) => {
     return res.status(400).json({ success: false, error: "Wardrobe is empty. Add some items first." });
   }
 
-  const wardrobeDesc = wardrobe.map(i => `${i.color} ${i.type} (${i.brand})`).join(", ");
-
-  const prompt = `You are StyleMate, an expert AI outfit stylist. The user's wardrobe contains: ${wardrobeDesc}.
-
-Occasion: ${occasion}
-Style persona: ${stylePersona}
-Weather: ${weather}
-
-Create a curated outfit from ONLY the items listed above. Respond ONLY with valid JSON, no markdown, no extra text:
-{
-  "outfit": ["<item 1 exactly as listed>", "<item 2>", "<item 3>"],
-  "why": "<2 sentences, specific and stylish reasoning>",
-  "tip": "<1 punchy styling tip>",
-  "vibe": "<3 descriptive words separated by ·>"
-}`;
-
   try {
-    const message = await client.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const result = recommend({ wardrobe, occasion, weather, stylePersona });
 
-    const raw = message.content[0].text.replace(/```json|```/g, "").trim();
-    const recommendation = JSON.parse(raw);
+    if (result.outfit.length === 0) {
+      return res.status(422).json({ success: false, error: "Could not assemble an outfit from current wardrobe items." });
+    }
 
     res.json({
       success: true,
-      data: recommendation,
-      meta: { occasion, stylePersona, weather, wardrobeSize: wardrobe.length },
+      data: {
+        outfit:     result.outfit,
+        why:        result.why,
+        tip:        result.tip,
+        vibe:       result.vibe,
+        confidence: result.confidence,
+        scores:     result.scores,
+      },
+      meta: { occasion, stylePersona, weather, wardrobeSize: wardrobe.length, model: result.model },
     });
   } catch (err) {
-    console.error("[Outfit] Claude error:", err.message);
-    res.status(500).json({ success: false, error: "Failed to generate recommendation. Check your API key." });
+    console.error("[Outfit] Model error:", err.message);
+    res.status(500).json({ success: false, error: "Recommendation model failed." });
   }
 };
 

@@ -30,6 +30,20 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "StyleMate API is running", timestamp: new Date().toISOString() });
 });
 
+// ── Model info ───────────────────────────────────────────────────
+app.get("/api/model", (req, res) => {
+  res.json({
+    name:        "StyleMate Content-Based Recommender",
+    version:     "1.0.0",
+    description: "In-house recommendation model using weighted cosine similarity on 5-dimensional clothing feature vectors. No external AI API.",
+    features:    ["formality", "warmth", "coverage", "color_neutrality", "versatility"],
+    events:      ["casual","office","business","formal","date night","party","wedding","gym","sport","beach","hiking","interview","brunch","travel"],
+    weather:     ["hot","warm","mild","cool","cold","rainy"],
+    personas:    ["classic","minimalist","streetwear","bohemian","preppy","edgy","sporty","chic"],
+    algorithm:   "Greedy category-covering selection with weighted cosine similarity + color harmony multiplier",
+  });
+});
+
 // ── Global error handler ─────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error("[Error]", err.message);

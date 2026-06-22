@@ -1,49 +1,55 @@
 import { useState } from "react";
 import { useWardrobe } from "./hooks/useWardrobe";
-import RecommendTab  from "./components/RecommendTab";
-import WardrobeTab   from "./components/WardrobeTab";
-import ChatTab       from "./components/ChatTab";
+import RecommendTab from "./components/RecommendTab";
+import WardrobeTab  from "./components/WardrobeTab";
+import ChatTab      from "./components/ChatTab";
 import "./index.css";
 
-const TABS = ["recommend", "wardrobe", "chat"];
+const TABS = [
+  { id: "recommend", label: "Recommend", icon: "✦" },
+  { id: "wardrobe",  label: "Wardrobe",  icon: "◈" },
+  { id: "chat",      label: "Advisor",   icon: "◎" },
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("recommend");
   const { wardrobe, loading, addItem, removeItem } = useWardrobe();
 
   return (
-    <div style={styles.app}>
-      {/* Ambient glow */}
-      <div style={styles.glowTop}    />
-      <div style={styles.glowBottom} />
+    <div style={s.app}>
+      <div style={s.glowTop} />
+      <div style={s.glowBot} />
+      <div style={s.glowMid} />
 
-      {/* Header */}
-      <header style={styles.header}>
+      {/* ── Header ── */}
+      <header style={s.header}>
         <div>
-          <div style={styles.logo}>Style<span style={styles.logoAccent}>Mate</span></div>
-          <div style={styles.tagline}>AI Outfit Intelligence</div>
+          <div style={s.logo}>Style<span style={s.accent}>Mate</span></div>
+          <div style={s.tagline}>AI Outfit Intelligence</div>
         </div>
-        <div style={styles.headerRight}>
+        <div style={s.badge}>
+          <span style={s.badgeDot} />
           {wardrobe.length} items in wardrobe
         </div>
       </header>
 
-      {/* Nav */}
-      <nav style={styles.nav}>
+      {/* ── Nav ── */}
+      <nav style={s.nav}>
         {TABS.map(tab => (
           <button
-            key={tab}
-            style={{ ...styles.tab, ...(activeTab === tab ? styles.tabActive : {}) }}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            className={`nav-tab${activeTab === tab.id ? " active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
           >
-            {tab}
-            {activeTab === tab && <span style={styles.tabUnderline} />}
+            <span style={{ marginRight: "7px", opacity: 0.65, fontSize: "13px" }}>{tab.icon}</span>
+            {tab.label}
+            {activeTab === tab.id && <span className="nav-tab-underline" />}
           </button>
         ))}
       </nav>
 
-      {/* Body */}
-      <main style={styles.body}>
+      {/* ── Body ── */}
+      <main style={s.body} key={activeTab}>
         {activeTab === "recommend" && <RecommendTab wardrobe={wardrobe} />}
         {activeTab === "wardrobe"  && <WardrobeTab wardrobe={wardrobe} loading={loading} onAdd={addItem} onRemove={removeItem} />}
         {activeTab === "chat"      && <ChatTab />}
@@ -52,18 +58,17 @@ export default function App() {
   );
 }
 
-const styles = {
-  app:          { minHeight: "100vh", background: "#0e0e0e", color: "#e8e4dc", fontFamily: "var(--font-sans)", fontWeight: 300, position: "relative", overflow: "hidden" },
-  glowTop:      { position: "fixed", top: "-40%", right: "-20%", width: "600px", height: "600px", borderRadius: "50%", background: "radial-gradient(circle,rgba(196,149,106,0.07) 0%,transparent 70%)", pointerEvents: "none", zIndex: 0 },
-  glowBottom:   { position: "fixed", bottom: "-30%", left: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle,rgba(30,45,90,0.12) 0%,transparent 70%)", pointerEvents: "none", zIndex: 0 },
-  header:       { padding: "28px 32px 0", display: "flex", alignItems: "flex-end", justifyContent: "space-between", position: "relative", zIndex: 10 },
-  logo:         { fontFamily: "var(--font-serif)", fontSize: "28px", fontWeight: 700, letterSpacing: "-0.5px", color: "#e8e4dc" },
-  logoAccent:   { color: "var(--gold)" },
-  tagline:      { fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: "var(--text-faint)", marginTop: "2px" },
-  headerRight:  { fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--text-faint)" },
-  nav:          { display: "flex", gap: "4px", padding: "22px 32px 0", position: "relative", zIndex: 10, borderBottom: "1px solid rgba(255,255,255,0.06)" },
-  tab:          { padding: "10px 20px", fontSize: "12px", letterSpacing: "1.5px", textTransform: "uppercase", fontWeight: 500, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", position: "relative", transition: "color 0.2s" },
-  tabActive:    { color: "var(--gold)" },
-  tabUnderline: { position: "absolute", bottom: "-1px", left: 0, right: 0, height: "1px", background: "var(--gold)", display: "block" },
-  body:         { padding: "32px", position: "relative", zIndex: 10, minHeight: "calc(100vh - 120px)", animation: "fadeIn 0.4s ease" },
+const s = {
+  app:      { minHeight: "100vh", background: "#0a0a0a", color: "#ede9e1", fontFamily: "var(--font-sans)", fontWeight: 300, position: "relative", overflow: "hidden" },
+  glowTop:  { position: "fixed", top: "-35%", right: "-15%", width: "700px", height: "700px", borderRadius: "50%", background: "radial-gradient(circle,rgba(196,149,106,0.055) 0%,transparent 65%)", pointerEvents: "none", zIndex: 0 },
+  glowBot:  { position: "fixed", bottom: "-30%", left: "-10%", width: "600px", height: "600px", borderRadius: "50%", background: "radial-gradient(circle,rgba(30,45,90,0.09) 0%,transparent 65%)", pointerEvents: "none", zIndex: 0 },
+  glowMid:  { position: "fixed", top: "45%", left: "50%", transform: "translate(-50%,-50%)", width: "900px", height: "400px", borderRadius: "50%", background: "radial-gradient(ellipse,rgba(196,149,106,0.02) 0%,transparent 60%)", pointerEvents: "none", zIndex: 0 },
+  header:   { padding: "28px 36px 0", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 10 },
+  logo:     { fontFamily: "var(--font-serif)", fontSize: "30px", fontWeight: 700, letterSpacing: "-0.5px" },
+  accent:   { color: "var(--gold)" },
+  tagline:  { fontSize: "10px", letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-faint)", marginTop: "3px" },
+  badge:    { display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--text-muted)", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", borderRadius: "20px", padding: "7px 16px" },
+  badgeDot: { width: "5px", height: "5px", borderRadius: "50%", background: "var(--gold)", boxShadow: "0 0 6px rgba(196,149,106,0.7)", flexShrink: 0 },
+  nav:      { display: "flex", gap: "2px", padding: "18px 36px 0", position: "relative", zIndex: 10, borderBottom: "1px solid rgba(255,255,255,0.05)" },
+  body:     { padding: "36px", position: "relative", zIndex: 10, minHeight: "calc(100vh - 130px)", animation: "fadeUp 0.35s ease both" },
 };
